@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>raa project</title>
+<style>
+body{margin:0;overflow:hidden;background:black}
+#ui{
+position:absolute;
+top:10px;
+left:10px;
+color:white;
+font-family:Arial;
+background:rgba(0,0,0,0.5);
+padding:10px;
+}
+</style>
+</head>
+<body>
+
+<div id="ui">
+raa project multiplayer<br>
+Room ID: <input id="room"><button onclick="join()">JOIN</button><br>
+W A S D = jalan
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152/build/three.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+<script>
+
+let scene = new THREE.Scene()
+scene.background = new THREE.Color(0x202020)
+
+let camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000)
+
+let renderer = new THREE.WebGLRenderer()
+renderer.setSize(innerWidth,innerHeight)
+document.body.appendChild(renderer.domElement)
+
+let light = new THREE.HemisphereLight(0xffffff,0x444444)
+scene.add(light)
+
+let floor = new THREE.Mesh(
+new THREE.PlaneGeometry(200,200),
+new THREE.MeshStandardMaterial({color:0x555555})
+)
+
+floor.rotation.x = -Math.PI/2
+scene.add(floor)
+
+camera.position.y = 2
+
+let peer = new Peer()
+let conn
+let enemy
+
+function join(){
+
+let id = document.getElementById("room").value
+
+conn = peer.connect(id)
+
+conn.on("data",(data)=>{
+enemy.position.set(data.x,data.y,data.z)
+})
+
+}
+
+peer.on("connection",(c)=>{
+conn = c
+
+conn.on("data",(data)=>{
+enemy.position.set(data.x,data.y,data.z)
+})
+
+})
+
+peer.on("open",(id)=>{
+document.getElementById("room").value=id
+})
+
+enemy = new THREE.Mesh(
+new THREE.BoxGeometry(1,2,1),
+new THREE.MeshStandardMaterial({color:0xff0000})
+)
+
+scene.add(enemy)
+
+let keys={}
+
+document.addEventListener("keydown",(e)=>keys[e.code]=true)
+document.addEventListener("keyup",(e)=>keys[e.code]=false)
+
+function animate(){
+
+requestAnimationFrame(animate)
+
+let speed=0.15
+
+if(keys["KeyW"]) camera.position.z-=speed
+if(keys["KeyS"]) camera.position.z+=speed
+if(keys["KeyA"]) camera.position.x-=speed
+if(keys["KeyD"]) camera.position.x+=speed
+
+if(conn){
+
+conn.send({
+x:camera.position.x,
+y:camera.position.y,
+z:camera.position.z
+})
+
+}
+
+renderer.render(scene,camera)
+
+}
+
+animate()
+
+</script>
+
+</body>
+</html>
